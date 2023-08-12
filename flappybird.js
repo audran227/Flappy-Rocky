@@ -61,20 +61,23 @@ window.onload = function() {
     bottomPipeImg = new Image();
     bottomPipeImg.src = "./bottompipe.png";
 
-    requestAnimationFrame(update);
+//    requestAnimationFrame(update);
     setInterval(placePipes, 1100); //every 1.1 seconds
     document.addEventListener("keydown", moveBird);
 }
 
 function update() {
     requestAnimationFrame(update);
-    if (!gameStarted || gameOver) { // Changed to check for gameStarted
+
+    if (gameOver) { // Changed to check for gameStarted
         return;
     }
     context.clearRect(0, 0, board.width, board.height);
 
     //bird
-    velocityY += gravity;   
+    if (gameStarted) {
+        velocityY += gravity; 
+    }
     bird.y = Math.max(bird.y + velocityY, 0);
 
     birdFrameChangeCounter++;
@@ -89,18 +92,20 @@ function update() {
     }
 
     //pipes
-    for (let i = 0; i < pipeArray.length; i++) {
-        let pipe = pipeArray[i];
-        pipe.x += velocityX;
-        context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
+    if(gameStarted) {
+        for (let i = 0; i < pipeArray.length; i++) {
+            let pipe = pipeArray[i];
+            pipe.x += velocityX;
+            context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
 
-        if (!pipe.passed && bird.x > pipe.x + pipe.width) {
-            score += 0.5;
-            pipe.passed = true;
-        }
+            if (!pipe.passed && bird.x > pipe.x + pipe.width) {
+                score += 0.5;
+                pipe.passed = true;
+            }
 
-        if (detectCollision(bird, pipe)) {
-            gameOver = true;
+            if (detectCollision(bird, pipe)) {
+                gameOver = true;
+            }
         }
     }
 
@@ -119,7 +124,7 @@ function update() {
 }
 
 function placePipes() {
-    if (gameOver) {
+    if (gameOver || !gameStarted) {
         return;
     }
 
@@ -149,12 +154,14 @@ function placePipes() {
 
 function moveBird(e) {
     if (e.code == "Space" || e.code == "ArrowUp" || e.code == "KeyX") {
+        velocityY = -7;
+
         if (!gameStarted && firstPlay) {
             gameStarted = true;
             firstPlay = false;
-            return;
+            requestAnimationFrame(update);
         }
-        velocityY = -7;
+        
 
         if (gameOver) {
             bird.y = birdY;
