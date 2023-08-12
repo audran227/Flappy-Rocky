@@ -1,19 +1,19 @@
-
 //board
 let board;
 let boardWidth = 360;
 let boardHeight = 640;
 let context;
+let firstPlay = true;
 
 //bird
-let birdWidth = 40; //width/height ratio = 408/228 = 17/12
+let birdWidth = 40;
 let birdHeight = 34;
 let birdX = boardWidth/8;
 let birdY = boardHeight/2;
-let birdImgs = []; //new
-let currentBirdImgIndex = 0; //new
-let birdFrameChangeRate = 10; //new
-let birdFrameChangeCounter = 0; //new
+let birdImgs = [];
+let currentBirdImgIndex = 0;
+let birdFrameChangeRate = 10;
+let birdFrameChangeCounter = 0;
 
 let bird = {
     x : birdX,
@@ -22,10 +22,9 @@ let bird = {
     height : birdHeight
 }
 
-
 //pipes
 let pipeArray = [];
-let pipeWidth = 64; //width/height ratio = 384/3072 = 1/8
+let pipeWidth = 64;
 let pipeHeight = 512;
 let pipeX = boardWidth;
 let pipeY = 0;
@@ -34,18 +33,19 @@ let topPipeImg;
 let bottomPipeImg;
 
 //physics
-let velocityX = -4; //pipes moving left speed
-let velocityY = 0; //bird jump speed
+let velocityX = -4;
+let velocityY = 0;
 let gravity = 0.4;
 
 let gameOver = false;
+let gameStarted = false; // New: added for checking game start status
 let score = 0;
 
 window.onload = function() {
     board = document.getElementById("board");
     board.height = boardHeight;
     board.width = boardWidth;
-    context = board.getContext("2d"); //used for drawing on the board
+    context = board.getContext("2d");
 
     //load images
     birdImgs[0] = new Image();
@@ -54,17 +54,6 @@ window.onload = function() {
     birdImgs[1].src = "./rocky2.png";
     birdImgs[2] = new Image();
     birdImgs[2].src = "./rocky3.png";
-
-    //draw flappy bird
-    // context.fillStyle = "green";
-    // context.fillRect(bird.x, bird.y, bird.width, bird.height);
-
-    //load images
-//    birdImg = new Image();
-//    birdImg.src = "./flappybird.png";
-//    birdImg.onload = function() {
-//        context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
-    }
 
     topPipeImg = new Image();
     topPipeImg.src = "./toppipe.png";
@@ -75,25 +64,26 @@ window.onload = function() {
     requestAnimationFrame(update);
     setInterval(placePipes, 1100); //every 1.1 seconds
     document.addEventListener("keydown", moveBird);
+}
 
 function update() {
     requestAnimationFrame(update);
-    if (gameOver) {
+    if (!gameStarted || gameOver) { // Changed to check for gameStarted
         return;
     }
     context.clearRect(0, 0, board.width, board.height);
 
     //bird
-    velocityY += gravity;
-    // bird.y += velocityY;
-    bird.y = Math.max(bird.y + velocityY, 0); //apply gravity to current bird.y, limit the bird.y to top of the canvas
-//     context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
+    velocityY += gravity;   
+    bird.y = Math.max(bird.y + velocityY, 0);
+
     birdFrameChangeCounter++;
     if(birdFrameChangeCounter >= birdFrameChangeRate) {
         currentBirdImgIndex = (currentBirdImgIndex + 1) % birdImgs.length;
         birdFrameChangeCounter = 0;
-}
+    }
     context.drawImage(birdImgs[currentBirdImgIndex], bird.x, bird.y, bird.width, bird.height);
+
     if (bird.y > board.height) {
         gameOver = true;
     }
@@ -105,7 +95,7 @@ function update() {
         context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
 
         if (!pipe.passed && bird.x > pipe.x + pipe.width) {
-            score += 0.5; //0.5 because there are 2 pipes! so 0.5*2 = 1, 1 for each set of pipes
+            score += 0.5;
             pipe.passed = true;
         }
 
@@ -114,9 +104,8 @@ function update() {
         }
     }
 
-    //clear pipes
     while (pipeArray.length > 0 && pipeArray[0].x < -pipeWidth) {
-        pipeArray.shift(); //removes first element from the array
+        pipeArray.shift();
     }
 
     //score
@@ -134,9 +123,6 @@ function placePipes() {
         return;
     }
 
-    //(0-1) * pipeHeight/2.
-    // 0 -> -128 (pipeHeight/4)
-    // 1 -> -128 - 256 (pipeHeight/4 - pipeHeight/2) = -3/4 pipeHeight
     let randomPipeY = pipeY - pipeHeight/4 - Math.random()*(pipeHeight/2);
     let openingSpace = board.height/6;
 
@@ -163,32 +149,28 @@ function placePipes() {
 
 function moveBird(e) {
     if (e.code == "Space" || e.code == "ArrowUp" || e.code == "KeyX") {
-        //jump
+        if (!gameStarted && firstPlay) {
+            gameStarted = true;
+            firstPlay = false;
+            return;
+        }
         velocityY = -7;
 
-        //reset game
         if (gameOver) {
             bird.y = birdY;
             pipeArray = [];
             score = 0;
             gameOver = false;
+            gameStarted = true;  // Reset game state
         }
     }
 }
 
-//function detectCollision(a, b) {
-//    return a.x < b.x + b.width &&   //a's top left corner doesn't reach b's top right corner
-//           a.x + a.width > b.x &&   //a's top right corner passes b's top left corner
-//           a.y < b.y + b.height &&  //a's top left corner doesn't reach b's bottom left corner
-//           a.y + a.height > b.y;    //a's bottom left corner passes b's top left corner
-//}
-// Avec cette nouvelle fonction
 function detectCollision(a, b) {
-    let hitboxReduction = 0.07;  // réduction de 7% de la hitbox
+    let hitboxReduction = 0.07;  
     let hitboxWidth = a.width * hitboxReduction;
     let hitboxHeight = a.height * hitboxReduction;
 
-    // ajouter la réduction de la hitbox aux calculs de collision
     return a.x + hitboxWidth < b.x + b.width &&
            a.x + a.width - hitboxWidth > b.x &&
            a.y + hitboxHeight < b.y + b.height &&
